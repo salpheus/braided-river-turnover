@@ -86,7 +86,12 @@ def pixel_turn_time(maskstack, diffs):
     for lat in range(maskstack.shape[1]):
         for long in range(maskstack.shape[2]):
             
-            ## find where the differences between timesteps are non zero, this would ignore all land pixels on the channel periphery that are inactive
+            # if np.logical_and(base_diffs[0, lat, long]==0, maskstack[0, lat, long]==1): #if we are in a channel i.e. we start wet and stay wet
+            #     ptt = np.nonzero(base_diffs[:, lat, long])[0].tolist()
+            #     ptt.insert(0, 0)
+            
+            # else:
+                ## find where the differences between timesteps are non zero, this would ignore all land pixels on the channel periphery that are inactive
             ptt = np.nonzero(base_diffs[:, lat, long])[0].tolist() ## this pulls out the time INDICES from the base diffs array where the pixels change.
                                                                     # the [0] just pulls the first dimension of the return bc its 2D by default and makes it a list
             

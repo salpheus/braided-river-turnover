@@ -23,11 +23,21 @@ font = {'family' : 'Helvetica',
 mpl.rc('font', **font)
 #%% 
 
-base_dataset = ['amguema', 'amudarya', 'Congo', 'congo_bumba_sambo', 'indus', 'irrawaddy', 'jamuna', 'kasai', 
-                'kasaidown', 'rakaia', 'southsask', 'tanana', 'ubangi', 'waitaki', 'yukon']
+# base_dataset = ['amguema', 'amudarya', 'Congo', 'congo_bumba_sambo', 'indus', 'irrawaddy', 'jamuna', 'kasai', 
+#                 'kasaidown', 'rakaia', 'southsask', 'tanana', 'ubangi', 'waitaki', 'yukon']
 
 base_dataset_colours = ['xkcd:light blue', 'xkcd:baby pink', 'xkcd:evergreen', 'xkcd:jungle green', 'xkcd:sage green', 'xkcd:dirty green', 'xkcd:muddy green', 'xkcd:shit', 
                 'xkcd:dirt', 'xkcd:steel', 'xkcd:greyblue', 'xkcd:dark grey blue', 'xkcd:camouflage green', 'xkcd:bluegrey', 'xkcd:flat blue']
+
+kgorder = ['kasai', 'kasai_down', 'congo_bumba_sambo', 'congo_lukolela_bolobo', 'ubangi', 'amudarya',
+           'indus', 'irrawaddy', 'jamuna', 'rakaia', 'colville', 'yukon', 'tanana', 'southsask', 'waitaki']
+
+latorder = ['colville', 'yukon', 'tanana', 'southsask', 'amudarya', 'indus', 'jamuna', 'irrawaddy', 'congo_bumba_sambo', 
+            'ubangi', 'congo_lukolela_bolobo', 'kasai_down', 'kasai', 'rakaia', 'waitaki']
+
+kgclimzones = ['Aw', 'Aw', 'Am', 'Af', 'Af', 'BWh', 'BWh', 'BSh', 'Cwa', 'Cfb', 'ET', 'Dsb', 'Dfb', 'Dfb', 'Cfb']
+
+kgcolours = pd.read_csv('/Volumes/SAF_Data/remote-data/kgcolours.csv', header = 0, index_col=0)
 t_init = 1987
 t_start = 2013
 t_end = 2021
@@ -42,9 +52,9 @@ rainbow_full = ListedColormap(plt.cm.rainbow(np.linspace(0, 1, full_levels)))
 #%% plot pristine grids
 
 root = '/Volumes/SAF_Data/remote-data'
-pristine_stack_path = os.path.join(root, 'arrays/pristine/maskstack/')
-pristine_diffs_path = os.path.join(root, 'arrays/pristine/diffs/')
-full_stack_path = os.path.join(root, 'arrays/full/maskstack/')
+pristine_stack_path = os.path.join(root, 'arrays/C02_SR_arrays_wl2/pristine/maskstack/')
+pristine_diffs_path = os.path.join(root, 'arrays/C02_SR_arrays_wl2/pristine/diffs/')
+full_stack_path = os.path.join(root, 'arrays/C02_SR_arrays_wl2/full/maskstack/')
 
 '''
 1. "pri"--Poster of the masks with time nrivers x nyears
@@ -59,9 +69,9 @@ full_stack_path = os.path.join(root, 'arrays/full/maskstack/')
 
 '''
 
-normdf = pd.DataFrame(index = years, columns = base_dataset) ## will store the data for the weird norm metric cumulative annual conv count/ (max polygon-median wet px area)
-occupationdf = pd.DataFrame(index = years, columns = base_dataset) ## will store the data for the normalised values of how much of each channel belt area is occupied through time
-pri, ax = plt.subplots(len(base_dataset), len(years), dpi = 400, figsize = (24, 36), squeeze= True)
+normdf = pd.DataFrame(index = years, columns = kgorder) ## will store the data for the weird norm metric cumulative annual conv count/ (max polygon-median wet px area)
+occupationdf = pd.DataFrame(index = years, columns = kgorder) ## will store the data for the normalised values of how much of each channel belt area is occupied through time
+pri, ax = plt.subplots(len(kgorder), len(years), dpi = 400, figsize = (24, 36), squeeze= True)
 pal, axs = plt.subplots(3, 5, dpi = 400, figsize = (20, 15), tight_layout = True, squeeze= True)
 # nsw, nax = plt.subplots(3, 5, dpi = 400, figsize = (20, 15), tight_layout = True, squeeze= True)
 
@@ -72,7 +82,7 @@ hsw, hax = plt.subplots(3, 5, dpi = 400, figsize = (15, 7), tight_layout = True,
 
 yearlykwargs = dict(density = True, bins = np.arange(0, len(years)), ec = 'k')
 
-for row, river in enumerate(base_dataset):
+for row, river in enumerate(kgorder):
     #ravel all axes
     a = axs.ravel() #
     p = pax.ravel() #
@@ -89,8 +99,8 @@ for row, river in enumerate(base_dataset):
     # plot number of switches per px location [fig 4]
     n_switches = np.count_nonzero(~np.isnan(px_turn_time), axis = 0)
     n_switches = n_switches[n_switches>0]
-    h[row].hist(n_switches.ravel(), **yearlykwargs, fc = base_dataset_colours[row])
-    h[row].set_title(base_dataset[row])
+    h[row].hist(n_switches.ravel(), **yearlykwargs, fc = tuple(kgcolours.loc[kgclimzones[row]]))
+    h[row].set_title(kgorder[row])
     h[row].set_xlabel('N switches per x loc')
     h[row].set_ylabel('Density')
     h[row].set_xlim(1, len(years))
@@ -99,10 +109,10 @@ for row, river in enumerate(base_dataset):
     # n[row].imshow(n_switches, cmap = rainbow_discrete, vmin = 0, vmax = 9) ## doesnt work bc n_switches is a list! fix next week
     
     # histogram of ptt [fig 3]
-    p[row].hist(px_turn_time.ravel(), **yearlykwargs, fc = base_dataset_colours[row])
+    p[row].hist(px_turn_time.ravel(), **yearlykwargs, fc =tuple(kgcolours.loc[kgclimzones[row]]))
     p[row].set_ylabel('Density')
     p[row].set_xlabel('Length of pixel turnover time')
-    p[row].set_title(base_dataset[row])
+    p[row].set_title(kgorder[row])
     p[row].set_xlim(1, len(years))
     # plt.savefig('/Users/safiya/Desktop/c2_local_exploration/ptt_length_hist.png')
     #
@@ -156,8 +166,9 @@ for row, river in enumerate(base_dataset):
     palmap = a[row].imshow(water_palette_mask, cmap = rainbow_discrete, vmin = 0, vmax = 9)
     a[row].set_title(f'Time to wet {river}')    
     plt.colorbar(palmap, ax = a[row], shrink = 0.75)
+    a[row].set_facecolor(tuple(kgcolours.loc[kgclimzones[row]]))
     
-    plt.savefig('/Users/safiya/Desktop/c2_local_exploration/time_to_wet-saturday.svg')
+    # plt.savefig('/Users/safiya/Desktop/c2_local_exploration/time_to_wet-saturday.svg')
 
 #%% Repeat for fullstack data
 
@@ -216,12 +227,12 @@ ax.set_ylabel('time to wet/(max-med wet px area)')
 ax.set_xlabel('year');
 
 
-plt.figure('full-norms', figsize = (10, 6), dpi = 300)
-ax = plt.gca()
-full_occupationdf.plot(lw = 2, marker = 'o', ms = 3, color = base_dataset_colours, ax = ax)
-plt.legend(labels = full_occupationdf.columns, bbox_to_anchor = (1.01, 1))
-ax.set_ylabel('time to wet/max wet px area')
-ax.set_xlabel('year');
+# plt.figure('full-norms', figsize = (10, 6), dpi = 300)
+# ax = plt.gca()
+# full_occupationdf.plot(lw = 2, marker = 'o', ms = 3, color = base_dataset_colours, ax = ax)
+# plt.legend(labels = full_occupationdf.columns, bbox_to_anchor = (1.01, 1))
+# ax.set_ylabel('time to wet/max wet px area')
+# ax.set_xlabel('year');
 
 #%% 
 
