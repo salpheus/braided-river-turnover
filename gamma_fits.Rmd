@@ -1,0 +1,211 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+library(ncdf4)
+library(fitdistrplus)
+stats_path = '/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover'
+ebi_stats = '/Volumes/SAF_Data/remote-data/rivgraph_transects_curated/0_ebi_masters'
+freq <- read.csv(file.path(stats_path, 'masters', 'num_turnovers_master.csv'))
+length <- read.csv(file.path(stats_path, 'masters', 'length_turnover_frequencies.csv'))
+nc_files <- list.files(file.path(stats_path, 'ptt_bulkstats'), pattern = '\\.nc$', full.names = TRUE)
+```
+Fit the distributions to the number of turns
+```{r} 
+### fit distributions to the number of turns
+# Create a summary dataframe to store the results
+numturns_df <- data.frame(
+  Column = character(),
+  Shape = numeric(),
+  Rate = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Iterate through each column
+for (col in names(freq)[-1]) {
+  # Remove NA values
+  cleaned_data <- na.omit(freq[[col]])
+  cleaned_data <- cleaned_data[cleaned_data >= 1]
+  
+  # Fit a gamma distribution to the cleaned data
+  fit <- fitdist(cleaned_data, "gamma")
+  
+  # Extract the shape and rate parameters
+  shape <- fit$estimate["shape"]
+  rate <- fit$estimate["rate"]
+  
+  # Add the results to the summary dataframe
+  numturns_df <- rbind(numturns_df, data.frame(Column = col, Shape = shape, Rate = rate))
+}
+
+# Print the summary dataframe
+write.csv(numturns_df, file.path(stats_path, 'masters', "NUMBER_gamma_fit_summary.csv"), row.names = FALSE)
+
+```
+
+Fit the distributions to the distribution of lengths of turnover times
+```{r}
+### fit distributions to the length of turn time
+# Create a summary dataframe to store the results
+lenturns_df <- data.frame(
+  Column = character(),
+  Shape = numeric(),
+  Rate = numeric(),
+  stringsAsFactors = FALSE
+)
+
+
+# Iterate through each column
+for (col in names(length)[-1]) {
+
+  vals <- length[['X']][!is.na(length[[col]])]
+  freqs <- as.vector(length[[col]][!is.na(length[[col]])])
+  expanded_data <- rep(vals, times = freqs)
+  
+  # Fit a gamma distribution to the cleaned data
+  fit <- fitdist(expanded_data, "gamma")
+  
+  # Extract the shape and rate parameters
+  shape <- fit$estimate["shape"]
+  rate <- fit$estimate["rate"]
+  
+  # Add the results to the summary dataframe
+  lenturns_df <- rbind(lenturns_df, data.frame(Column = col, Shape = shape, Rate = rate))
+  
+  png_filename <- file.path(stats_path, 'turnfigs', paste0("len_gamma_fit_", tools::file_path_sans_ext(basename(csv_file)), ".png"))
+  png(filename = png_filename)
+  plot(fit)
+  dev.off()
+}
+
+# Print the summary dataframe
+write.csv(lenturns_df, file.path(stats_path, 'masters', "LENGTH_gamma_fit_summary.csv"), row.names = FALSE)
+```
+
+Fit distributions to the ebi distribution per river
+```{r}
+## fit distributions to the ebi data
+# Get a list of all CSV files in the folder
+ebi_csvs <- list.files(ebi_stats, pattern = "\\.csv$", full.names = TRUE)
+
+# Create a summary dataframe to store the results
+ebi_df <- data.frame(
+  File = character(),
+  Shape = numeric(),
+  Rate = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Iterate through each CSV file
+for (csv_file in ebi_csvs) {
+  # Read the CSV file into a dataframe
+  data <- read.csv(csv_file)
+  
+  # Iterate through each column in the dataframe, excluding the first column
+  cleaned_data <- na.omit(data$ebi)
+  cleaned_data <- cleaned_data[cleaned_data >= 1]
+  
+  fit <- fitdist(cleaned_data, "gamma")
+      
+  # Extract the shape and rate parameters
+  shape <- fit$estimate["shape"]
+  rate <- fit$estimate["rate"]
+      
+  # Add the results to the summary dataframe
+  ebi_df <- rbind(ebi_df, data.frame(
+    File = basename(csv_file),
+    Shape = shape,
+    Rate = rate
+      ))
+  
+  # Plot the fitted distribution
+ 
+  
+  
+  # Optional: Save each plot as a PNG file
+  png_filename <- file.path(stats_path, 'turnfigs', paste0("gamma_fit_", tools::file_path_sans_ext(basename(csv_file)), ".png"))
+  png(filename = png_filename)
+  plot(fit)
+  dev.off()
+}
+    
+
+# Optional: Save the summary dataframe to a CSV file
+write.csv(ebi_df, file.path(stats_path, 'masters', "EBI_gamma_fit_summary.csv"), row.names = FALSE)
+
+```
+
+Fit distributions to the mean turntime length
+```{r}
+
+# Create a summary dataframe to store the results
+meantt_df <- data.frame(
+  File = character(),
+  Shape = numeric(),
+  Rate = numeric(),
+  stringsAsFactors = FALSE
+)
+
+meantt_dry_df <- data.frame(
+  File = character(),
+  Shape = numeric(),
+  Rate = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Iterate through each CSV file
+for (ncfile in nc_files) {
+  # Read the CSV file into a dataframe
+  nc_data <- nc_open(ncfile)
+  mean <- na.omit(as.vector(ncvar_get(nc_data, 'meantime')))
+  mean_dry <-  na.omit(as.vector(ncvar_get(nc_data, 'meantimed_dryfor')))
+
+  mean <- mean[mean>= 1]  
+  mean_dry <- mean_dry[mean_dry >= 1]
+  fit_mean <- fitdist(mean, "gamma")
+  fit_mean_dry <- fitdist(mean_dry, "gamma")
+      
+  # Extract the shape and rate parameters
+  shape <- fit_mean$estimate["shape"]
+  rate <- fit_mean$estimate["rate"]
+  
+  shape_d <- fit_mean_dry$estimate["shape"]
+  rate_d <- fit_mean_dry$estimate["rate"]
+      
+  # Add the results to the summary dataframe
+  meantt_df <- rbind(meantt_df, data.frame(
+    File = basename(ncfile),
+    Shape = shape,
+    Rate = rate
+      ))
+  
+  meantt_dry_df <- rbind(meantt_dry_df, data.frame(
+    File = basename(ncfile),
+    Shape = shape_d,
+    Rate = rate_d
+      ))
+  
+  # Plot the fitted distribution
+  png_filename <- file.path(stats_path, 'turnfigs', paste0("gamma_fit_mean", tools::file_path_sans_ext(basename(ncfile)), ".png"))
+  png(filename = png_filename)
+  plot(fit_mean)
+  dev.off()
+  
+  png_filename_d <- file.path(stats_path, 'turnfigs', paste0("gamma_fit_mean_dry", tools::file_path_sans_ext(basename(ncfile)), ".png"))
+  png(filename = png_filename_d)
+  plot(fit_mean_dry)
+  dev.off()
+}
+    
+
+# Optional: Save the summary dataframe to a CSV file
+write.csv(meantt_df, file.path(stats_path, 'masters', "meantt_gamma_fit_summary.csv"), row.names = FALSE)
+write.csv(meantt_dry_df, file.path(stats_path, 'masters', "meantt_dry_gamma_fit_summary.csv"), row.names = FALSE)
+
+```

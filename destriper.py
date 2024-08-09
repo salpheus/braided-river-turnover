@@ -20,17 +20,17 @@ import copy
 congo = np.load('/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/full/maskstack/congo_destriped_fullstack.npy')
 years = np.arange(1987, 2024)
 realyrs = np.where(np.isin(years, np.arange(1999, 2024)))[0]
-for yr in realyrs:
-    plt.figure(figsize = (10, 10), dpi = 400)
-    plt.imshow(congo[yr, :, :], cmap = 'binary')
-    plt.title(years[yr])
+# for yr in realyrs:
+#     plt.figure(figsize = (10, 10), dpi = 400)
+#     plt.imshow(congo[yr, :, :], cmap = 'binary')
+#     plt.title(years[yr])
 
 congo_fix = copy.deepcopy(congo)
 # badyrs = [2011]
 # badyrs = [1999]
-goodyear = 2020
+goodyear = 2003
 good_yr_pos = np.where(np.isin(years, goodyear))[0]
-badyrs = [2004, 2005, 2007, 2008, 2011]
+badyrs = [2004]
 bad_yr_pos = np.where(np.isin(years, badyrs))[0]
 
 max_loss = pd.DataFrame(columns = badyrs, index = ['tot img change', 'wetted area change'])
@@ -46,7 +46,7 @@ synyr = 1999
 pxdim = len(congo_fix[synslice, :, :].ravel()) ## find total numbr of px
 wetpx = np.sum(congo_fix[synslice, :, :]) ## find number of wet px in total image
 
-congopre = congo[23, :, :] #2003(16), 2006(19), 2010(23)
+congopre = congo[16, :, :] #2003(16), 2006(19), 2010(23)
 congosyn = congo[synslice, :, :] #2007(20), 2004(17), 2005(18), 2008(21), 2011(24)
 congopost = congo[13, :, :] #2006(19), 2009(22), 2012(25)
 
@@ -120,10 +120,10 @@ plt.title('All destriped years')
 plt.colorbar()
 #%% rewrite the geotiffs
 
-yr = 1999
-mslice = 12
-path_to_tiff = ('/Volumes/SAF_Data/remote-data/watermasks/C02_1987-2023_may/congo_lukolela_bolobo/mask/1999on')
-fname = f'congo_lukolela_bolobo_{yr}_01_01_{yr}_12_31_mask.tif'
+yr = 2004
+mslice = 17
+path_to_tiff = ('/Volumes/SAF_Data/remote-data/watermasks/C02_1987-2023_may/congo_lukolela_bolobo/original-bad-yrs/')
+fname = f'congo_lukolela_bolobo_2004_01_01_2004_12_31_mask 17.08.56.tif'
 outname = f'congo_lukolela_bolobo_{yr}_01_01_{yr}_12_31_mask_ds.tif'
 
 orig_mask = gdal.Open(os.path.join(path_to_tiff, fname))
@@ -146,7 +146,8 @@ def write_geotiff(filename, arr, in_ds):
     band.ComputeStatistics(False)
 
 fixed_mask = congo_fix[mslice, :, :]
-    
+# fixed_mask = congo[mslice, :, :]
+# outpath = ('/Volumes/SAF_Data/remote-data/watermasks/C02_1987-2023_may/congo_lukolela_bolobo/mask/1999on')
 write_geotiff(os.path.join(path_to_tiff, outname), fixed_mask, orig_mask)
 
 fix_check = gdal.Open(os.path.join(path_to_tiff, outname))

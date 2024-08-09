@@ -11,12 +11,15 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 import matplotlib.colors as mcolors
 import matplotlib.cm as cm
+import scipy.stats as stats
 import matplotlib as mpl
 import numpy.ma as ma
 import os
+from sklearn.neighbors import KernelDensity
 import pandas as pd
 import glob
 import seaborn as sns
+import scipy.stats as stats
 font = {'family' : 'Helvetica',
         'weight' : 'normal',
         'size'   : 10}
@@ -31,6 +34,7 @@ stats_path = f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_
 inventory = pd.read_excel('/Volumes/SAF_Data/remote-data/watermasks/admin/inventory-offline.xlsx')
 
 inventory_alphabetical = inventory.sort_values(by = 'river', axis = 0, ascending = True)
+inventory_alphabetical = inventory_alphabetical.set_index('river')
 flierprops = dict(marker='o', markerfacecolor='xkcd:gray', markersize=2,  markeredgecolor='xkcd:gray')
 meanprops = dict(marker = 'o', markerfacecolor = 'blue', ms = 0, mec = 'k', mew = 0, linestyle = '--', linewidth = 1.5, color = 'k')
 meanlineprops = dict(linestyle = '-', lc = 'k', lw = 2)
@@ -39,6 +43,21 @@ capprops = dict(color = 'k', linewidth = 1.5)
 whiskerprops = dict(color = 'k', linecolor = 'k')
 boxwidth = 0.35
 linewidth = 1.5
+#%% make pair plot grid of the values in inventory
+inventory_alphabetical.loc[16, 'part_size_mm'] = np.nan ## remove the gravel grainsize from the distribution
+sns.pairplot(data = inventory_alphabetical, vars = ['bed-ssc_qw_m3yr', 'part_size_mm', 'Tm_timescale', 'Tr_timescale', 'efficiency', 'mean_ebi', 'med_ebi', 
+                                                    'entropy_len', 'entropy_ebi', 'entropy_nturn', 'entropy_meantt_dry'
+    ], height = 1.5, aspect = 1, dropna = True)
+
+#%% temp cell to average data from lin dataset
+
+lin_slopes = pd.read_excel('/Volumes/SAF_Data/remote-data/watermasks/admin/inventory-offline.xlsx', sheet_name = 'lin_database', header = 2)
+
+lin_avg = lin_slopes.groupby('river').mean(numeric_only = True)
+lin_std = lin_slopes.groupby('river').std(numeric_only = True)
+
+
+
 #%% build some csvs or something that are easier to work with 
 
 # nclist = glob.glob(os.path.join(stats_path, 'turnstats', '*.nc'))
@@ -69,6 +88,8 @@ linewidth = 1.5
 boxpos = np.arange(0, 21)
 maxturns = pd.read_csv(os.path.join(stats_path, 'masters', 'max_turntime_master.csv'), index_col=0)
 nturns = pd.read_csv(os.path.join(stats_path, 'masters', 'num_turnovers_master.csv'), index_col=0)
+freq_turns = nturns/25
+freq_turns['agubh2'] = (freq_turns['agubh2']*25)/26 ## agubh2 has 26 timesteps, not 25
 len_turns = pd.read_csv(os.path.join(stats_path, 'masters', 'length_turnover_frequencies.csv'), index_col = 0)
 
 nturns_ds = pd.DataFrame(nturns.describe()) ## descriptive statistics for the number of turnover times 
@@ -78,20 +99,38 @@ maxturns_ds = pd.DataFrame(maxturns.describe()) ## descriptive statistics for th
 # nturns = nturns.drop(columns = ['kasai'])
 # maxturns = maxturns.drop(columns = ['kasai'])
 
+len_turns_means = pd.DataFrame(columns = len_turns.columns) #mean turnover length
+max_tt_means = pd.DataFrame(columns = len_turns.columns) #mean max turnover length
+num_tt_means = pd.DataFrame(columns = nturns.columns) #mean number of turnovers
+for col in len_turns.columns:
+    len_turns_means.loc[1, col] = np.nansum(len_turns[col]*np.arange(1, 26))/np.nansum(len_turns[col])
+    max_tt_means.loc[1, col] = np.nanmean(maxturns[col])
+    num_tt_means.loc[1, col] = np.nanmean(nturns[col])
+#%% calculate shannon entropy of numbr of turnover times
+# inventory_alphabetical['entropy'] = ''
+
+for riv in inventory_alphabetical.index.values:
+    probabilities = nturns[riv].value_counts().sort_index(axis = 0)
+    probabilities_base = np.sum(probabilities)
+    probablities = probabilities/probabilities_base
+    
+    shannon = stats.entropy(probabilities, base = 2)
+    inventory_alphabetical.loc[riv, 'entropy'] = shannon
+
 #%% build mega merge df
 
 ## load swatches
-hex_codes = pd.read_csv('/Volumes/SAF_Data/remote-data/watermasks/admin/inventory-hex_codes.csv')
-hex_codes['rgb'] = [tuple(int(value) / 255.0 for value in rgb.split(',')) for rgb in hex_codes['rgb']]
+# hex_codes = pd.read_csv('/Volumes/SAF_Data/remote-data/watermasks/admin/inventory-hex_codes.csv')
+# hex_codes['rgb'] = [tuple(int(value) / 255.0 for value in rgb.split(',')) for rgb in hex_codes['rgb']]
 
-print(hex_codes.columns)
+# print(hex_codes.columns)
 swatches = ['#ffffe4', '#fff4b8', '#ffe98b', '#ffde5a', '#ffd126', '#ffc31d', '#ffb416', '#ffa50f', '#ff9608', '#ff8500']
 
 cmap = mcolors.ListedColormap(swatches)
 
 
-#%% Plot boxplots pixel scale
-colorby_attr = 'bedload_qw'
+#%% Plot boxplots pixel scale---cmap is garbage
+colorby_attr = 'mean_ebi'
 fig, (ax1, ax2) = plt.subplots(2, 1, tight_layout = True, dpi = 150, figsize = (15, 6))
 
 ntbox = nturns.boxplot(ax=ax1, whis=[5, 95], showfliers=True, flierprops=flierprops, grid=False,
@@ -213,15 +252,15 @@ color_df = inventory_alphabetical
 
 fig, ax = plt.subplots(1, 3, figsize = (10, 4), tight_layout = True, dpi = 300) 
 
-nt = ax[0].scatter(inventory_alphabetical.loc[:, 'bed-ssc_qw_m3yr'],  nturns_ds.loc['mean', :], 
+nt = ax[0].scatter(inventory_alphabetical.loc[:, 'Tm_timescale'],  nturns_ds.loc['mean', :], 
                    c = color_df[colorby_attr], ec = 'k',
                    cmap = 'Blues')#, norm = mcolors.LogNorm());
 
-maxt = ax[1].scatter(inventory_alphabetical.loc[:, 'bed-ssc_qw_m3yr'], maxturns_ds.loc['mean', :], 
+maxt = ax[1].scatter(inventory_alphabetical.loc[:, 'Tr_timescale'], len_turns_means.loc[1, :], 
                       c = color_df[colorby_attr], ec = 'k',
                       cmap = 'Blues')#, norm = mcolors.LogNorm());
 
-propt = ax[2].scatter(inventory_alphabetical.loc[:, 'bed-ssc_qw_m3yr'], propturn_ds.loc['mean', :], 
+propt = ax[2].scatter(inventory_alphabetical.loc[:, 'med_ebi'], propturn_ds.loc['mean', :], 
                       c = color_df[colorby_attr], ec = 'k',
                       cmap = 'Blues')#, norm = mcolors.LogNorm());
 
@@ -231,11 +270,11 @@ propt = ax[2].scatter(inventory_alphabetical.loc[:, 'bed-ssc_qw_m3yr'], propturn
 fig.colorbar(propt, ax = ax[2], orientation = 'vertical', label = colorby_attr)
 
 ax[0].set_ylabel('mean nturns');
-ax[0].set_xlabel('sed flux vol');
-ax[1].set_ylabel('Mean max turnover length');
-ax[1].set_xlabel('sed flux vol');
-ax[2].set_ylabel('3e');
-ax[2].set_xlabel('sed flux vol');
+ax[0].set_xlabel('Tm');
+ax[1].set_ylabel('Mean turnover length');
+ax[1].set_xlabel('Tr');
+ax[2].set_ylabel('prop turned');
+ax[2].set_xlabel('med ebi');
 
 
 # ax[2].set_xscale('log')
@@ -345,9 +384,75 @@ for a, ncfile in enumerate(bulk_stats_ncs):
     
     plt.savefig(f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/turnfigs/hotspotmaps/mean_TT_{name}.png')
     
+#%% 
+fig, ax = plt.subplots(3, 7, figsize = (25, 15), dpi = 300, tight_layout = True, sharex = True, sharey = True)
+ax = ax.ravel()
+for a, riv in enumerate(nturns.columns):
+    length = len_turns[riv]
+    # ax[a].hist2d(nturns[riv][~np.isnan(nturns[riv])], maxturns[riv][~np.isnan(maxturns[riv])], bins = [np.arange(0, 1, 0.1), np.arange(0, 25)])
+    ax[a].hist2d(nturns[riv][~np.isnan(nturns[riv])], maxturns[riv][~np.isnan(maxturns[riv])], bins = [np.arange(0, 1, .04), np.arange(0, 25)])
+    ax[a].set_title(riv)
+    ax[a].set_xlabel('Turnover frequency')
+    ax[a].set_ylabel('max turnover duration')
+    
+#%% subplots of length of turnover and turnover frequency
 
+x_d = np.linspace(0, 25, 50)
+bins = np.arange(1, 25)
+params_length = pd.DataFrame(columns = ['shape', 'loc', 'scale'], index = len_turns.columns)
+params_freq= pd.DataFrame(columns = ['shape', 'loc', 'scale'], index = len_turns.columns)
 
+for a, riv in enumerate(len_turns.columns):
+    vals = len_turns.index.values[:-1]
+    freqs = len_turns[riv][~np.isnan(len_turns[riv])].to_numpy(dtype = int)
 
+    distribution = np.repeat(vals, freqs) ## reproduce the distribution of turnover lengths across the entire river
+    # kde_length = KernelDensity(kernel = 'gaussian', bandwidth = 2).fit(distribution[:, None])
+    lsh, lloc, lsca = stats.gamma.fit(distribution) ## shape, location and scale parameters
+    params_length.loc[riv, :] = [lsh, lloc, lsca]
 
+    nturns_freq = nturns[riv].dropna(axis = 0).to_numpy(dtype = int)
+    fsh, floc, fsca = stats.gamma.fit(nturns_freq)
+    params_freq.loc[riv, :] = [fsh, floc, fsca]
+ 
+    # kde_freq = KernelDensity(kernel = 'gaussian', bandwidth = 2).fit(nturns_freq[:, None])
+    # log_length = kde_length.score_samples(x_d)
+    # log_freq = kde_freq.score_samples(x_d)
+    
+# #plot data
+fig_f, fax = plt.subplots(3, 7, figsize = (20, 10), tight_layout = True, sharex = True, dpi = 300)
+fig_l, lax = plt.subplots(3, 7, figsize = (20, 10), tight_layout = True, sharex = True, dpi = 300)
+lax = lax.ravel()
+fax = fax.ravel()
+for a, riv in enumerate(len_turns.columns):    
+    
+    vals = len_turns.index.values[:-1]
+    freqs = len_turns[riv][~np.isnan(len_turns[riv])].to_numpy(dtype = int)
 
+    distribution = np.repeat(vals, freqs)
+    
+    len_prms = params_length.loc[riv, :].to_numpy()
+    length_y = stats.gamma.pdf(x_d, len_prms[0], len_prms[1], len_prms[2]) #expo
 
+    fre_prms = params_freq.loc[riv, :].to_numpy()
+    freq_y = stats.gamma.pdf(x_d, fre_prms[0], fre_prms[1], fre_prms[2])
+    
+    fax[a].hist(nturns[riv], bins, density = True, 
+                color = 'xkcd:light grey', edgecolor = 'k', linewidth = .5)
+    fax[a].plot(x_d, freq_y, 'r--')
+    fax[a].set_title(f'{riv}')
+    
+    lax[a].hist(distribution, density = True, bins = bins,
+                color = 'xkcd:light grey', edgecolor = 'k', linewidth = .5)
+    lax[a].plot(x_d, length_y, 'r--')
+    lax[a].set_title(f'{riv}')
+
+    fax[a].set_ylim(0, .5)
+    fax[a].set_xlabel('number of turns')
+    lax[a].set_ylim(0, .5)
+    lax[a].set_xlabel('length of turnover')
+    
+# plt.figure(figsize = (10, 10), dpi = 150)
+# # plt.hist(nturns['amudaryadown'], bins = bins, density = True)
+# plt.hist(distribution, bins = bins)
+# p_test = stats.gamma.fit(nturns['amudaryadown'][~np.isnan(nturns['amudaryadown'])])
