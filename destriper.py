@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Fri Jun 14 15:26:18 2024
-
+need to run this in an environment that has gdal (like rivgraph maybe)
 @author: safiya
 """
 from osgeo import gdal
@@ -17,7 +17,7 @@ import copy
 '''so basically im thinking we make a bad mask sandwich and fill in spaces that were water before and after the stripe year with water
 ...for doube bad years well just have to also do the same and figure out how to make it work'''
 
-congo = np.load('/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/full/maskstack/congo_destriped_fullstack.npy')
+congo = np.load('/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/full/maskstack/congo_destriped_fullstack.npy')
 years = np.arange(1987, 2024)
 realyrs = np.where(np.isin(years, np.arange(1999, 2024)))[0]
 # for yr in realyrs:

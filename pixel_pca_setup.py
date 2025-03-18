@@ -13,10 +13,10 @@ import xarray as xr
 import glob
 import os
 
-ndvi_path = (f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/ndvi_stacks_withwater/*.npy') ## path to ndvi arrays
-turnstats_path = (f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/ptt_bulkstats/*.nc') ## path to the turnover statistics
-nturns_path = (f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/turnstats')
-inventory = pd.read_excel('/Volumes/SAF_Data/remote-data/watermasks/admin/inventory-offline.xlsx', index_col=0)
+ndvi_path = (f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/ndvi_stacks_withwater_clipped/*.npy') ## path to ndvi arrays
+turnstats_path = (f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/ptt_bulkstats/*.nc') ## path to the turnover statistics
+nturns_path = (f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/turnstats')
+inventory = pd.read_excel('/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/admin/inventory-offline.xlsx', sheet_name = 'inventory_py', index_col=0)
 # pull main static attributes
 pca_params = ['mean_annu_qw_sc','bed-ssc_qw_m3yr', 'part_size_mm', 'bed_prop_of_total',
               'Tm_timescale', 'Tr_timescale', 'terrain_slope',
@@ -58,18 +58,19 @@ for arr, nc in zip(glob.glob(ndvi_path), glob.glob(turnstats_path)[1:]): ## leav
                        'meantt': mean, 
                        'medtt': med, 
                        'nturns': numturns})
-    df.to_csv(f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/megadf_pca/{rivname}.csv')
+    df.to_csv(f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/megadf_pca/{rivname}_ndvic.csv')
 
 #%% ## load all csvs and merge into a megamerge
 
-csv_paths = glob.glob(f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/megadf_pca/*.csv')
+csv_paths = glob.glob(f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/megadf_pca/clipped_ndvi/*.csv')
 
 merged_df = pd.read_csv(csv_paths[0])
 
 for file in csv_paths[1:]:
     merged_df = pd.concat((merged_df, pd.read_csv(file)), axis = 0, ignore_index = True)
 
-merged_df.to_csv(f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/megadf_pca/megamerge_pca.csv')
+merged_df.drop('Unnamed: 0', axis = 1)
+merged_df.to_csv(f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/megadf_pca/clipped_ndvi/megamerge_pca.csv')
 
 
 

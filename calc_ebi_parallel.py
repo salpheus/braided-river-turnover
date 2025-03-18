@@ -1,3 +1,5 @@
+## run in environment 'geopand' !!!
+
 import os
 import math
 import numpy as np
@@ -12,7 +14,7 @@ from rasterio.mask import mask
 import glob
 import rasterio.features
 from multiprocessing import Pool
-
+#%%
 # Function to extract raster values along a linestring
 def extract_raster_values_along_line(linestring, raster):
     num_points = int(linestring.length)  # or adjust based on your need
@@ -116,12 +118,12 @@ def process_river(river, results_base, all_river_tiffs, years):
 
 # Main script
 if __name__ == '__main__':
-    all_river_tiffs = '/Volumes/SAF_Data/remote-data/watermasks/C02_1987-2023_may'
+    all_river_tiffs = '/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/C02_1987-2023_may'
     all_rivers = os.listdir(all_river_tiffs)
     exclude_list = ['brahmaputra_yangcun', '.DS_Store', 'congo_new', 'agubh2']
     all_rivers = [riv for riv in all_rivers if riv not in exclude_list]
     
-    results_base = '/Volumes/SAF_Data/remote-data/rivgraph_transects_curated'
+    results_base = '/Volumes/SAF_Data/SAF_Data/remote-data/rivgraph_transects_curated'
     years = np.arange(1999, 2024)
 
     with Pool() as pool:
@@ -157,8 +159,8 @@ def extract_raster_values_along_line(linestring, raster):
     return raster_values, valid_points
 #%% GO IN AFTER TO PROCESS BAD YEARS
 
-river = 'ob_down'
-years = np.arange(2005, 2009)
+river = 'rakaia'
+years = np.arange(1999, 2001)
 
 centerline_fol = os.path.join(results_base, river)
 
@@ -169,9 +171,11 @@ for a, year in enumerate(years):
     print(year)
     save_path = os.path.join(results_base, river, f'ebi_ww_{year}.csv')
     if os.path.exists(save_path):
+        print('continue')
         continue
     try:
         transect_path = os.path.join(centerline_fol, str(year), f'{river}_meshlines.shp')
+        # transect_path = os.path.join(centerline_fol, str(year), f'{brahmaputra_pandu}_meshlines.shp')
         if not os.path.exists(transect_path):
             continue
         
@@ -182,9 +186,11 @@ for a, year in enumerate(years):
             continue
         
         raster = rasterio.open(raster_path[0])
+        if raster.crs != transect.crs:
+            raster = raster.to_crs(transect.crs)
         
-        if transect.crs != raster.crs:
-            transect = transect.to_crs(raster.crs)
+        # if transect.crs != raster.crs:
+        #     transect = transect.to_crs(raster.crs)
     
         transect_ebi = pd.DataFrame(columns=['ebi', 'wetted_width'], index=transect['FID'])
         
@@ -224,7 +230,7 @@ for a, year in enumerate(years):
         print(f"Error processing year {year} for river {river}: {e}")
         error_years.append(year)
 
-# plt.savefig(os.path.join(results_base, river, f'{river}_ebi.png'))
+plt.savefig(os.path.join(results_base, river, f'{river}_ebi.png'))
 
 if error_years:
     print(f"Errors occurred for river {river} in years: {error_years}")
@@ -252,5 +258,89 @@ for river in all_rivers:
     plt.savefig(os.path.join(results_base, river, f'{river}_ebi.png'))
     
     
+#%% singularly process to get thread widths        
+
+river = 'amudaryadown' add thread count!****
+years = np.arange(1999, 2024)
+# years = [1999, ]
+
+centerline_fol = os.path.join(results_base, river)
+
+error_years = []
+
+for a, year in enumerate(years):
+    
+    print(year)
+    save_path = os.path.join(results_base, river, f'threadwidths_{year}.csv')
+    if os.path.exists(save_path):
+        print('continue')
+        continue
+    try:
+        transect_path = os.path.join(centerline_fol, str(year), f'{river}_meshlines.shp')
+
+        if not os.path.exists(transect_path):
+            continue
         
+        transect = gpd.read_file(transect_path)
         
+        raster_path = glob.glob(os.path.join(all_river_tiffs, river, 'mask/1999on', f'*{year}*.tif'))
+        if not raster_path:
+            continue
+        
+        raster = rasterio.open(raster_path[0])
+        # if raster.crs != transect.crs:
+        #     raster = raster.to_crs(transect.crs)
+        
+        if transect.crs != raster.crs:
+            transect = transect.to_crs(raster.crs)
+    
+        transect_tw = pd.DataFrame(columns=['min', 'max', 'mean', 5, 10, 15, 20, 25, 30, 25, 40,
+                                             45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95], index=transect['FID'])
+        
+        for idx, row in transect.iterrows():
+            linestring = row.geometry
+            raster_values, points = extract_raster_values_along_line(linestring, raster)
+            
+            if raster_values:
+                raster_values = np.array(raster_values, dtype=int)
+                
+                edges = np.diff(raster_values)
+                l_edges = np.where(edges == 1)[0]
+                r_edges = np.where(edges == -1)[0]
+                
+                if len(l_edges) > len(r_edges):
+                    widths = r_edges - l_edges[:len(r_edges)]
+                
+                elif len(r_edges)>len(l_edges):
+                    widths = r_edges[1:] - l_edges
+                
+                else:
+                    widths = r_edges - l_edges
+                
+                
+                wetted_width = np.nansum(widths)
+                
+                if wetted_width > 0:
+                    quantiles = np.nanquantile(widths, np.arange (.05, .96, .05))
+                    descrip = np.array([np.nanmin(widths), np.nanmax(widths), np.nanmean(widths)])
+                    
+                    # ebi = -1 * np.nansum((widths / wetted_width) * np.log2(widths / wetted_width))
+                    # ebi = 2 ** ebi
+                else:
+                    continue
+                    # ebi = 0
+                dataarray = np.concatenate((descrip, quantiles), axis = 0)
+                transect_tw.loc[idx, :] = dataarray
+                # transect_ebi.loc[idx, 'wetted_width'] = wetted_width
+        
+        transect_tw.to_csv(os.path.join(results_base, river, f'threadwidths_{year}.csv'))
+    except Exception as e:
+        print(f"Error processing year {year} for river {river}: {e}")
+        error_years.append(year)
+
+# plt.savefig(os.path.join(results_base, river, f'{river}_ebi.png'))
+
+if error_years:
+    print(f"Errors occurred for river {river} in years: {error_years}")
+    
+    

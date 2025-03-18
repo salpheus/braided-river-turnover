@@ -1,0 +1,136 @@
+---
+title: "Turnover_Cluster_Analysis"
+output: html_document
+date: "2024-08-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Performing Agglomerative Nesting on rivers used for PCA results (combo test)
+Note: unit discharge, sedflux, bedload proportion and slope are log10 values.
+
+Following methods from http://stratigrafia.org/software/pdf/clusterTutorial.pdf
+
+```{r}
+library(cluster)
+library(svglite)
+library(factoextra)
+library(dendextend)
+vars_path = '/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/admin/pca_vars_for_agnes.csv'
+stdvars_path = '/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/admin/pca_agnes_standard.csv'
+rivdata <- read.csv(vars_path, row.names = 1)
+rivstd <- read.csv(stdvars_path, row.names = 1)
+
+```
+
+run a default cluster analyses using agnes() without any transformation of the data
+
+```{r}
+rivdata.agnes <- agnes(rivdata)
+```
+
+customise the cluster analysis changing the diistance measure (metric), linkage method (method) and standardize the variables (stand)
+
+```{r}
+#rivdata.agnes.ALT <- agnes(rivdata, metric = 'manhattan', method = 'ward', stand = TRUE)
+rivstd.agnes.ALT <- agnes(rivstd, metric = 'manhattan', method = 'ward', stand = FALSE)
+
+```
+
+run cluster annalysis on a distance matrix rather than data. This lets you use a different distance metric (here, sorenson)
+
+```{r}
+#library(vegan) ## this is a library for distance functions
+#rivdata.bray <- vegdist(rivdata, method = 'bray') ## bray = Sorenson distances among samples....doesnt like that bc there are negative values
+#rivdata.bray.agnes <- agnes(rivdata.bray)
+```
+
+View the items in list produced by agnes: 
+1.  mydata.agnes$order: numeric order of the samples on the dendrogram, with 1 being the sample at the left/top of the dendrogram
+2.  mydata.agnes$height: stores distances of merging clusters
+3.  mydata.agnes$ac: agglomerative coefficient, a measure of the clustering structure, but is sensitive to sample size
+4.  mydata.agnes$merge: describes merging of clusters at each step
+5.  mydata.agnes$diss: dissimilarity matrix of dataset, including dissimilarity measure and number of objects
+6.  mydata.agnes$call: how the function was called
+7.  mydata.agnes$method: linkage method
+8.  mydata.agnes$order.lab: like order, but with sample labels
+9.  mydata.agnes$data: matrix of data or dissimilarities named in call to function
+
+```{r}
+names(rivdata.agnes)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+plotting the dendrogram
+```{r pressure, echo=FALSE}
+#plot(pressure)
+#svglite('/Volumes/SAF_Data/SAF_Data/remote-data/manuscript_figs/cluster_pcacombo.svg', width = 8, height = 6)
+#png('/Volumes/SAF_Data/SAF_Data/remote-data/manuscript_figs/cluster_pcacombo.png', width = 8, height = 6, units = 'in', res = 300)
+plot(rivstd.agnes.ALT, which.plots = 2, main = "Dendrogram of the rivers_manhattan, ward")
+#plot(rivstd.agnes.ALT, which.plots = 2, main = "Dendrogram of the rivers_manhattan, ward prestd")
+dev.off()
+
+```
+Re-doing the cluster analyses based off the parameterisation in the docs:
+
+agnes(x, diss = inherits(x, "dist"), metric = "euclidean",
+      stand = FALSE, method = "average", par.method,
+      keep.diss = n < 100, keep.data = !diss, trace.lev = 0)
+      
+• 'diss' is logical and should be false if just inputting variables, True if inputting a dissimilarity matrix
+• 'metric' defines the metric you want to use to calculate the distances, manhattan uses sum of absolute differences, euclidean are root sum of  squares differences--euclidean recomended in holland tutprial for linear data (which i have linearised so I'm using this)
+• 'stand' flags if data is to be standardised before calculating the dissimilarities (TRUE)
+• 'method' defines the clustering method you want to use: from Holland tutorial: A variety of linkage methods can be used to determine in what order clusters may join. The nearest neighbor or single linkage method is based on the elements of two clusters that are most similar, whereas the farthest neighbor or complete linkage method is based on the ele- ments that are most dissimilar. Both of these are based on outliers of distributions, which may not be desirable. The median, group average, and centroid methods all emphasize the central tendency of clusters and are less sensitive to outliers. Group average may be un- weighted (also known as UPGMA) or weighted (WPGMA). Ward’s method joins clusters based on minimizing the within-group sum of squares and will tend to produce compact clus- ters.
+
+From the bot (chatGPT)--
+Comparison in AGNES:
+Sensitivity to Outliers:
+
+Euclidean: More sensitive to outliers due to the squaring of differences.
+Manhattan: Less sensitive to outliers, as it does not square the differences.
+Data Shape and Scale:
+
+Euclidean: Works best with data that has a similar scale across all dimensions and where the relationship between dimensions is uniform.
+Manhattan: More effective when the data has different scales or when features are independent and contribute separately to the distance metric.
+Clustering Shapes:
+
+Euclidean: Tends to form spherical clusters because it minimizes the straight-line distance.
+Manhattan: May result in more rectangular or grid-like clusters, reflecting the nature of the Manhattan distance metric.
+Choosing Between Manhattan and Euclidean:
+Manhattan Distance: Preferred in cases where data features are independent and have different scales or in high-dimensional spaces where the curse of dimensionality makes Euclidean distance less meaningful.
+Euclidean Distance: Ideal for data with uniform scales and isotropic distributions, where a straight-line measure is appropriate.
+
+--should probably use a central tendency type method, default is 'average' 
+from docs: The six methods implemented are "average" ([unweighted pair-]group [arithMetic] average method, aka ‘UPGMA’), "single" (single linkage), "complete" (complete linkage), "ward" (Ward's method), "weighted" (weighted average linkage, aka ‘WPGMA’), its generalization "flexible" which uses (a constant version of) the Lance-Williams formula and the par.method argument, and "gaverage" a generalized "average" aka “flexible UPGMA” method also using the Lance-Williams formula and par.method.
+
+
+```{r}
+## tryng to figure out clustering stuff
+
+fviz_nbclust(rivstd, FUN = hcut, method = "silhouette")
+
+```      
+```{r}
+## continuing ward method clustering https://uc-r.github.io/hc_clustering#kmeans
+hc5 <- hclust(rivstd.agnes.ALT$diss, method = "ward.D2" ) ## identify subgroups with cuttree using Wards method from the agnnes dissimilarity matrix
+sub_grp <- cutree(hc5, k = 3) ## 4 from the silouette thing up there
+
+fviz_cluster(list(data = rivstd, cluster = sub_grp))
+plot(hc5, cex = 0.6)
+rect.hclust(hc5, k = 4, border = 2:5)
+```
+
+```{r}
+## try using many clusters
+for(k in 2:5) {
+  clusters <- cutree(hc5, k)
+  sil <- silhouette(clusters, rivstd.agnes.ALT$diss)
+  avg_sil_width <- mean(sil[, 3])
+  print(paste("Average silhouette width for", k, "clusters:", avg_sil_width))
+}
+```

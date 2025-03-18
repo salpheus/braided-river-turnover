@@ -52,8 +52,8 @@ def calc_turnover(ncfile):
     full_turn['PTT'] = (['year', 'lat', 'lon'], ptt)
     full_turn['PTTFlags'] = (['year', 'lat', 'lon'], flags)
     
-    turnstats.to_netcdf(f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/turnstats/{name}_stats.nc')
-    full_turn.to_netcdf(f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/ptt-flags/{name}_full.nc')
+    turnstats.to_netcdf(f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/turnstats/{name}_stats.nc')
+    full_turn.to_netcdf(f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/ptt-flags/{name}_full.nc')
 
 # set up multiprocessing
 

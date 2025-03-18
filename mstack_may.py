@@ -25,8 +25,8 @@ def concatenate_dataframes(summary, df):
     return summary
 
 def process_river(river, src, img, save, resolution):
-    mask_names = glob.glob(f'/Volumes/SAF_Data/remote-data/watermasks/{src}/{river}/mask/*.tif')
-    image_names = glob.glob(f'/Volumes/SAF_Data/remote-data/watermasks/{src}/{river}/image/*.tif')
+    mask_names = glob.glob(f'/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/{src}/{river}/mask/1999on/*.tif')
+    image_names = glob.glob(f'/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/{src}/{river}/image/1999on/*.tif')
     
     summary = pd.DataFrame(columns=['year', 'wet px', 'wet area'])
     
@@ -80,14 +80,14 @@ def process_river(river, src, img, save, resolution):
     skipdiffs = np.diff(skipstack, axis=0)
     
     summary.set_index('year')
-    summary.to_csv(f'/Volumes/SAF_Data/remote-data/watermasks/admin/mask_database_csv/C02_1987-2023_allLS_db_csv/{river}_sum_summary_skip.csv')
+    summary.to_csv(f'/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/admin/mask_database_csv/C02_1987-2023_allLS_db_csv/{river}_sum_summary_skip.csv')
     
     pristine = maskstack[-9:, :, :]
     pristine_diffs = np.diff(pristine, axis=0)
     
     if save:
-        saveroot = '/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/'
-        compilation.savefig(f'/Volumes/SAF_Data/remote-data/watermasks/admin/mask_compilation/C02_1987-2023_allLS_db_poster/{river}_compilation_sum_stackmasks_skip.png', dpi=400)
+        saveroot = '/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/'
+        compilation.savefig(f'/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/admin/mask_compilation/C02_1987-2023_allLS_db_poster/{river}_compilation_sum_stackmasks_skip.png', dpi=400)
         
         np.save(os.path.join(saveroot, 'full/maskstack/', f'{river}_fullstack.npy'), maskstack, allow_pickle=True)
         np.save(os.path.join(saveroot, 'full/diffs/', f'{river}_diffs_fullstack.npy'), diffs, allow_pickle=True)
@@ -100,8 +100,8 @@ def process_river(river, src, img, save, resolution):
 
 def maskstack(img=False, save=False):
     src = input('ENTER Parent folder: ')
-    #rivlist = os.listdir(f'/Volumes/SAF_Data/remote-data/watermasks/{src}/')
-    rivlist = ['agubh2']
+    # rivlist = os.listdir(f'/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/{src}/')
+    rivlist = ['brahmaputra_pandu_allyr']
     print(rivlist)
     
     resolution = (30 * 30) / 1e-6  # landsat resolution in km2

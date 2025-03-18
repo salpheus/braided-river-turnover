@@ -7,7 +7,8 @@ Created on Thu Jun 20 11:12:34 2024
 """
 import matplotlib.pyplot as plt
 import numpy as np
-import xarray as xr
+import xarray as xr 
+ 
 import rasterio
 from rasterio.transform import Affine
 import os
@@ -22,17 +23,17 @@ crs = pd.DataFrame(columns = ['river', 'CRS'])
 
 # rivlist = os.listdir('/Volumes/SAF_Data/remote-data/watermasks/C02_1987-2023_may/')
 # rivlist = ['lena', 'congo_lukolela_bolobo']
-rivlist = ['congo_destriped']
+rivlist = ['brahmaputra_pandu_allyr']
 for rivname in rivlist:
     print(f'processing {rivname}')
-    rivpath = f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/full/maskstack/{rivname}_fullstack.npy'
+    rivpath = f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/full/maskstack/{rivname}_fullstack.npy'
     
     # tiffpath = f'/Volumes/SAF_Data/remote-data/watermasks/C02_1987-2023_may/{rivname}/mask/*.tif'
-    tiffpath = f'/Volumes/SAF_Data/remote-data/watermasks/C02_1987-2023_may/congo_lukolela_bolobo/mask/*.tif'
+    tiffpath = f'/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/C02_1987-2023_may/{rivname}/mask/1999on/*.tif'
     latest_tiff = glob.glob(tiffpath)[-1]
     
-    allyears = np.arange(1987, 2024)
-    calc_years = np.where(np.isin(allyears, np.arange(1999, 2024)))[0]
+    allyears = np.arange(1990, 2024)
+    calc_years = np.where(np.isin(allyears, np.arange(1999, 2024)))[0] ##check this before you run for the timespan of your landsy
     years = np.arange(1999, 2024)
     
     start_yr = calc_years[0] ## we are building the netcdf using data from 1999-2023 only
@@ -80,7 +81,7 @@ for rivname in rivlist:
     rivmasks = xr.Dataset()
     rivmasks['masks'] = masks
     
-    rivmasks.to_netcdf(f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc/{rivname}_masks.nc')
+    rivmasks.to_netcdf(f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc/{rivname}_masks.nc')
     
     
 #%% save csv of the crses
