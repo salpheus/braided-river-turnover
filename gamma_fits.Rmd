@@ -1,6 +1,8 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  pdf_document: default
+  html_notebook: default
 ---
 
 This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
@@ -10,11 +12,14 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 ```{r}
 library(ncdf4)
 library(fitdistrplus)
-stats_path = '/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover'
-ebi_stats = '/Volumes/SAF_Data/remote-data/rivgraph_transects_curated/0_ebi_masters'
-freq <- read.csv(file.path(stats_path, 'masters', 'num_turnovers_master.csv'))
-length <- read.csv(file.path(stats_path, 'masters', 'length_turnover_frequencies.csv'))
-nc_files <- list.files(file.path(stats_path, 'ptt_bulkstats'), pattern = '\\.nc$', full.names = TRUE)
+turn_freq_path = '/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/masters/px_turnfreq_0s/numbers_only'
+stats_path = '/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover'
+fig_path = '/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/masters/px_turnfreq_0s/dist_figs'
+# ebi_stats = '/Volumes/SAF_Data/remote-data/rivgraph_transects_curated/0_ebi_masters'
+
+# freq <- read.csv(file.path(stats_path, 'masters', 'num_turnovers_master.csv'))
+# length <- read.csv(file.path(stats_path, 'masters', 'length_turnover_frequencies.csv'))
+# nc_files <- list.files(file.path(stats_path, 'ptt_bulkstats'), pattern = '\\.nc$', full.names = TRUE)
 ```
 Fit the distributions to the number of turns
 ```{r} 
@@ -138,6 +143,59 @@ for (csv_file in ebi_csvs) {
 
 # Optional: Save the summary dataframe to a CSV file
 write.csv(ebi_df, file.path(stats_path, 'masters', "EBI_gamma_fit_summary.csv"), row.names = FALSE)
+
+```
+
+NEW 2025!! Fit the distributions to the distributions of numbers of turnovers per pixel in each river (across the entire corridor)
+```{r}
+## fit distributions to the ebi data
+# Get a list of all CSV files in the folder
+tf_csvs <- list.files(turn_freq_path, pattern = "\\.csv$", full.names = TRUE)
+
+# Create a summary dataframe to store the results
+turnfreq_df <- data.frame(
+  File = character(),
+  Shape = numeric(),
+  Rate = numeric(),
+  stringsAsFactors = FALSE
+)
+
+# Iterate through each CSV file
+for (csv_file in tf_csvs) {
+  # Read the CSV file into a dataframe
+  data <- as.numeric(read.csv(csv_file, header=FALSE)[[1]])
+  
+  
+  
+  # # Iterate through each column in the dataframe, excluding the first column
+   cleaned_data <- na.omit(data)
+  # cleaned_data <- cleaned_data[cleaned_data >= 1]
+
+  fit <- fitdist(data, "gamma", method = "mme")
+      
+  # Extract the shape and rate parameters
+  shape <- fit$estimate["shape"]
+  rate <- fit$estimate["rate"]
+      
+  # Add the results to the summary dataframe
+  turnfreq_df <- rbind(turnfreq_df, data.frame(
+    File = basename(csv_file),
+    Shape = shape,
+    Rate = rate
+      ))
+  
+  # Plot the fitted distribution
+  # Optional: Save each plot as a PNG file
+  png_filename <- file.path(fig_path, paste0("gamma_fit_", tools::file_path_sans_ext(basename(csv_file)), ".png"))
+  png(filename = png_filename)
+  plot(fit)
+  dev.off()
+}
+    
+summary_path = '/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/masters/px_turnfreq_0s'
+
+# Optional: Save the summary dataframe to a CSV file
+write.csv(turnfreq_df, file.path(summary_path, "pxfreq_0s_gam_mme_sum.csv"), row.names = FALSE)
 
 ```
 

@@ -75,7 +75,7 @@ data_folder = input('where is the data stored: ')
 
 # river = input('which river? ')
 # base = f'/Volumes/SAF_Data/remote-data/watermasks/{data_folder}/'
-base = f'/Volumes/SAF_Data/remote-data/watermasks/C02_1987-2023_may/'
+base = f'/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/C02_1987-2023_may/'
 rivers = os.listdir(base)
 # rivers = ['congo_lukolela_bolobo', 'lena']
 rivers.remove('brahmaputra_yangcun')
@@ -93,14 +93,14 @@ for river in rivers:
     # root = '/Volumes/SAF_Data/CHAPTER2/greenberg-area-data/full-dataset/Greenberg_AreaMobility_Data/NaturalRiverData/SSaskatchOutlook'
     # paths = get_paths(root)
     
-    poly = f"/Volumes/SAF_Data/remote-data/watermasks/gpkgs_fnl/{river}.gpkg"
-    # poly = "/Volumes/SAF_Data/CHAPTER2/greenberg-area-data/full-dataset/Greenberg_AreaMobility_Data/NaturalRiverData/SSaskatchOutlook/SSaskatchOutlook.gpkg"
+    # poly = f"/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/gpkgs_fnl/{river}.gpkg"
+    # # poly = "/Volumes/SAF_Data/CHAPTER2/greenberg-area-data/full-dataset/Greenberg_AreaMobility_Data/NaturalRiverData/SSaskatchOutlook/SSaskatchOutlook.gpkg"
     
-    mobility_csvs = '/Volumes/SAF_Data/remote-data/greenberg-mobility-outputs/C02_1987-2023_may_1999/mobcsvs'
-    out = '/Volumes/SAF_Data/remote-data/greenberg-mobility-outputs/C02_1987-2023_may_1999' # blocked fit_stats outputs
-    mobility_out = '/Volumes/SAF_Data/remote-data/greenberg-mobility-outputs/C02_1987-2023_may_1999/mobility'
-    figout = '/Volumes/SAF_Data/remote-data/greenberg-mobility-outputs/C02_1987-2023_may_1999/figs'
-    #uncomment line 95 if you want to recalculate mobility stats
+    # mobility_csvs = '/Volumes/SAF_Data/SAF_Data/remote-data/greenberg-mobility-outputs/C02_1987-2023_may_1999/mobcsvs'
+    # out = '/Volumes/SAF_Data/SAF_Data/remote-data/greenberg-mobility-outputs/C02_1987-2023_may_1999' # blocked fit_stats outputs
+    # mobility_out = '/Volumes/SAF_Data/SAF_Data/remote-data/greenberg-mobility-outputs/C02_1987-2023_may_1999/mobility'
+    # figout = '/Volumes/SAF_Data/SAF_Data/remote-data/greenberg-mobility-outputs/C02_1987-2023_may_1999/figs'
+    # #uncomment line 95 if you want to recalculate mobility stats
     # get_mobility_rivers(poly, paths, river) ## gets mobility yearly, makes a csv in the root folder of mobility data
 #%% compille csvs and compute curves
 # stop = 30
@@ -221,6 +221,7 @@ for file in glob.glob(os.path.join(mobility_csvs, '*.csv')):
 #%% calculate constants M and R
 full_dataset = full_dataset.sort_values('tbase')
 fr_dataset = fr_dataset.sort_values('tbase')
+# rivers = ['brahmaputra_pandu_allyr']
 linear_reworking = pd.DataFrame(columns = rivers, index = ['Rct']) ##store fp constants
 linear_ov_decay = pd.DataFrame(columns = rivers, index = ['Mct']) ##store reworking constant
 

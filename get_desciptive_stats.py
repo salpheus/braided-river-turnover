@@ -52,7 +52,7 @@ def describe_turnover(ptt_file, stats_file):
     bulk_stats['sdtime_w4'] = riv_ptt.where(riv_ptt.PTTFlags == -1).PTT.std(dim = 'year', skipna = True)
     bulk_stats['sdtime_d4'] = riv_ptt.where(riv_ptt.PTTFlags == -1).PTT.std(dim = 'year', skipna = True)
     
-    bulk_stats.to_netcdf(f'/Volumes/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/ptt_bulkstats/{name}.nc')
+    bulk_stats.to_netcdf(f'/Volumes/SAF_Data/SAF_Data/remote-data/arrays/C02_1987-2023_allLS_db/1999_nc_turnover/ptt_bulkstats/{name}.nc')
     
 # set up multiprocessing
 

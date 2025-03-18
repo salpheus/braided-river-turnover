@@ -18,17 +18,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 # from skimage.draw import line
 
-all_river_tiffs = '/Volumes/SAF_Data/remote-data/watermasks/C02_1987-2023_may'
+all_river_tiffs = '/Volumes/SAF_Data/SAF_Data/remote-data/watermasks/C02_1987-2023_may'
 all_rivers = os.listdir(all_river_tiffs)
 all_rivers.remove('brahmaputra_yangcun')
 all_rivers.remove('.DS_Store')
 all_rivers.remove('congo_new')
 all_rivers.remove('agubh2')
 
-results_base = '/Volumes/SAF_Data/remote-data/rivgraph_centerlines'
+results_base = '/Volumes/SAF_Data/SAF_Data/remote-data/rivgraph_transects_curated'
 
 ## for riv in all_rivers:
-riv = all_rivers[1]    
+riv = all_rivers[1] 
+riv = 'brahmaputra_pandu_allyr'   
 riv_base = os.path.join(results_base, riv)
 
 all_masks = glob.glob(os.path.join(all_river_tiffs, riv, 'mask/1999on/*.tif'))   
